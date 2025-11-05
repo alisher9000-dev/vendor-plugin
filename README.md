@@ -148,8 +148,8 @@ You are free to modify and redistribute it under the same license.
 ## 💬 Author
 
 **Vendor Registry** plugin by *CB Vendor Solutions (vendor123)*  
-📧 Support: alisherr.wasmer.com  
-🌐 Website: [https://alisherr.wasmer.com](https://alisherr.wasmer.com)
+📧 Support: alisherr.wasmer.app  
+🌐 Website: [https://alisherr.wasmer.app](https://alisherr.wasmer.app)
 
 ---
 
