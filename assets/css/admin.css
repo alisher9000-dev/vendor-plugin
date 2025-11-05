@@ -1,0 +1,415 @@
+/* CB Vendor Registry Admin Styles */
+.cbvr-import-page .card {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.cbvr-import-page .progress-bar-container {
+    margin: 15px 0;
+}
+
+.cbvr-import-page .progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #f1f1f1;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.cbvr-import-page .progress-fill {
+    height: 100%;
+    background: #0073aa;
+    transition: width 0.3s ease;
+}
+
+.cbvr-import-page .progress-text {
+    text-align: center;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+.cbvr-import-page .progress-details {
+    margin-top: 15px;
+}
+
+.cbvr-import-page .status-completed {
+    color: #46b450;
+    font-weight: bold;
+}
+
+.cbvr-import-page .status-failed {
+    color: #dc3232;
+    font-weight: bold;
+}
+
+.cbvr-import-page .status-processing {
+    color: #ffb900;
+    font-weight: bold;
+}
+
+/* Frontend Search Styles */
+.cbvr-vendor-search {
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.cbvr-search-filters {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e1e1e1;
+}
+
+.cbvr-search-filters fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+.cbvr-search-filters legend {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding: 0;
+}
+
+.filter-group {
+    margin-bottom: 15px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3338;
+}
+
+.filter-group select,
+.filter-group input[type="text"],
+.filter-group input[type="number"] {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-group select[multiple] {
+    height: auto;
+    min-height: 80px;
+}
+
+.rate-range {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rate-range input {
+    flex: 1;
+}
+
+.range-separator {
+    font-weight: bold;
+    color: #666;
+}
+
+.filter-actions {
+    margin-top: 20px;
+}
+
+.cbvr-search-button,
+.cbvr-reset-button {
+    padding: 10px 20px;
+    border: 1px solid;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.cbvr-search-button {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+}
+
+.cbvr-search-button:hover {
+    background: #005a87;
+}
+
+.cbvr-reset-button {
+    background: #fff;
+    color: #2271b1;
+    border-color: #2271b1;
+}
+
+.cbvr-reset-button:hover {
+    background: #f6f7f7;
+}
+
+/* Active Filters */
+.cbvr-active-filters {
+    background: #f0f6fc;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid #0073aa;
+}
+
+.cbvr-active-filters h3 {
+    margin: 0 0 10px 0;
+    font-size: 1em;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 16px;
+    padding: 4px 8px 4px 12px;
+    font-size: 12px;
+    cursor: default;
+}
+
+.remove-chip {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    margin-left: 4px;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+    border-radius: 50%;
+}
+
+.remove-chip:hover {
+    background: #d63638;
+    color: white;
+}
+
+/* Loading State */
+.cbvr-loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.cbvr-loading p {
+    font-size: 1.1em;
+}
+
+/* Results */
+.cbvr-results-header {
+    margin-bottom: 20px;
+}
+
+.cbvr-results-header h2 {
+    margin: 0;
+    color: #2c3338;
+}
+
+.cbvr-vendors-list {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.vendor-card {
+    background: #fff;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+}
+
+.vendor-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.vendor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.vendor-name {
+    margin: 0;
+    color: #2c3338;
+    font-size: 1.3em;
+}
+
+.vendor-rating {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #ffb900;
+    font-weight: 600;
+}
+
+.rating-count {
+    color: #666;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+
+.vendor-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.vendor-details div {
+    padding: 5px 0;
+}
+
+.vendor-skills {
+    margin-top: 15px;
+}
+
+.skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.skill-tag {
+    background: #f0f6fc;
+    color: #2271b1;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    border: 1px solid #ccd0d4;
+}
+
+/* Pagination */
+.cbvr-pagination {
+    margin-top: 30px;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cbvr-page-link {
+    padding: 8px 16px;
+    border: 1px solid #dcdcde;
+    background: #fff;
+    color: #2271b1;
+    text-decoration: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.cbvr-page-link:hover {
+    background: #f6f7f7;
+    border-color: #2271b1;
+}
+
+.cbvr-page-link.active {
+    background: #2271b1;
+    color: #fff;
+    border-color: #2271b1;
+}
+
+.cbvr-page-link:disabled {
+    color: #a7aaad;
+    cursor: not-allowed;
+}
+
+.cbvr-page-link:disabled:hover {
+    background: #fff;
+    border-color: #dcdcde;
+}
+
+/* No Results */
+.cbvr-no-results {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-size: 1.1em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vendor-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .vendor-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .rate-range {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .range-separator {
+        text-align: center;
+    }
+    
+    .pagination-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .cbvr-page-link {
+        text-align: center;
+    }
+}
+
+/* Accessibility */
+.cbvr-search-button:focus,
+.cbvr-reset-button:focus,
+.cbvr-page-link:focus,
+.remove-chip:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .vendor-card {
+        border: 2px solid;
+    }
+    
+    .cbvr-search-button,
+    .cbvr-reset-button {
+        border-width: 2px;
+    }
+}
