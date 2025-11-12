@@ -34,7 +34,7 @@ class AdminUi
 
     public function enqueue_admin_scripts($hook)
     {
-        if ($hook !== 'tools_page_cb-vendor-registry-import') {
+        if ($hook !== 'toplevel_page_cb-vendor-registry-import') {
             return;
         }
 
