@@ -81,7 +81,7 @@ The **frontend script (`frontend.js`)**:
 You can display the **Vendor Search Interface** on any page using the shortcode:
 
 ```php
-[vendor_registry]
+[cbvr_vendor_search]
 ```
 
 This will render:
@@ -126,7 +126,7 @@ This will render:
 1. Upload the plugin folder to `/wp-content/plugins/`.
 2. Activate **Vendor Registry** from the WordPress “Plugins” menu.
 3. Go to **Vendor Registry → Import Vendors** to import your vendor data.
-4. Add `[vendor_registry]` shortcode to any page where you want the vendor search to appear.
+4. Add `[cbvr_vendor_search]` shortcode to any page where you want the vendor search to appear.
 
 ---
 
