@@ -155,6 +155,14 @@ $active_locks = $lock_service->get_active_locks();
     <?php endif; ?>
 
     <div class="card">
+        <h2>Cache Management</h2>
+        <p>Clear all cached vendor search results to force fresh queries.</p>
+        <button type="button" class="button button-secondary" id="cbvr-clear-cache">Clear Vendor Search Cache</button>
+        <span id="cbvr-clear-cache-status" style="margin-left: 10px;"></span>
+    </div>
+
+
+    <div class="card">
         <h2>Import CSV File</h2>
         <form id="cbvr-import-form" enctype="multipart/form-data">
             <?php wp_nonce_field('cbvr_import_nonce', 'nonce'); ?>
