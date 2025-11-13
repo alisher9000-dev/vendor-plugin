@@ -5,17 +5,24 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class Importer {
+class Importer
+{
     private $db_schema;
     private $lock;
 
-    public function __construct() {
+    private $cache;
+
+
+    public function __construct()
+    {
         $this->db_schema = new DbSchema();
         $this->lock = new Lock();
+        $this->cache = $this;
         add_action('wp_ajax_cbvr_cancel_import', [$this, 'handle_cancel_import']);
     }
 
-    public function process_upload($file) {
+    public function process_upload($file)
+    {
         if ($this->lock->is_locked('csv_import')) {
             return new \WP_Error('import_locked', 'Another import is currently in progress');
         }
@@ -27,14 +34,14 @@ class Importer {
         try {
             $file_hash = md5_file($file['tmp_name']);
             $total_rows = $this->count_csv_rows($file['tmp_name']);
-            
+
             if ($total_rows === 0) {
                 $this->lock->release('csv_import');
                 return new \WP_Error('empty_file', 'CSV file is empty or invalid');
             }
 
             $import_id = $this->create_import_record($file['name'], $file_hash, $total_rows);
-            
+
             if (is_wp_error($import_id)) {
                 $this->lock->release('csv_import');
                 return $import_id;
@@ -42,7 +49,7 @@ class Importer {
 
             $upload_dir = wp_upload_dir();
             $temp_file = $upload_dir['path'] . '/cbvr_import_' . $import_id . '_' . $file_hash . '.csv';
-            
+
             if (!move_uploaded_file($file['tmp_name'], $temp_file)) {
                 $this->delete_import_record($import_id);
                 $this->lock->release('csv_import');
@@ -50,7 +57,7 @@ class Importer {
             }
 
             $result = $this->process_entire_file($import_id, $temp_file, $total_rows);
-            
+
             if (is_wp_error($result)) {
                 throw new \Exception($result->get_error_message());
             }
@@ -63,9 +70,10 @@ class Importer {
         }
     }
 
-    private function process_entire_file($import_id, $file_path, $total_rows) {
+    private function process_entire_file($import_id, $file_path, $total_rows)
+    {
         global $wpdb;
-        
+
         $this->update_import_status($import_id, 'processing', 0);
 
         try {
@@ -79,7 +87,7 @@ class Importer {
             }
 
             $header = fgetcsv($handle);
-            
+
             if (!$this->validate_header($header)) {
                 fclose($handle);
                 throw new \Exception('Invalid CSV header. Expected: email,name,skills,rate,currency,avg_rating,completed_projects,plan_code');
@@ -95,7 +103,7 @@ class Importer {
                     $this->cleanup_import($import_id, $file_path);
                     return new \WP_Error('cancelled', 'Import was cancelled');
                 }
-                
+
                 $parsed_row = $this->parse_csv_row($row);
                 if ($parsed_row && !empty($parsed_row['email'])) {
                     $batch_data[] = $parsed_row;
@@ -127,69 +135,103 @@ class Importer {
             $this->lock->release('csv_import');
             $this->cleanup_file($file_path);
 
+            $this->clear_search_cache();
+
             return true;
 
         } catch (\Exception $e) {
             if (isset($handle) && $handle) {
                 fclose($handle);
             }
-            
+
             $this->update_import_status($import_id, 'failed', $processed, $e->getMessage());
             $this->lock->release('csv_import');
             $this->cleanup_file($file_path);
-            
+
             return new \WP_Error('processing_error', $e->getMessage());
         }
     }
 
-    private function validate_header($header) {
+    public function clear_search_cache()
+    {
+        global $wpdb;
+
+        $prefix = 'cbvr_search_';
+
+        $transients = $wpdb->get_col("
+        SELECT option_name 
+        FROM $wpdb->options 
+        WHERE option_name LIKE '_transient_%{$prefix}%'
+           OR option_name LIKE '_transient_timeout_%{$prefix}%'
+    ");
+
+        $cleared_count = 0;
+        foreach ($transients as $transient) {
+            $key = str_replace(['_transient_', '_transient_timeout_'], '', $transient);
+            if (delete_transient($key)) {
+                $cleared_count++;
+            }
+        }
+
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+
+        return $cleared_count;
+    }
+
+
+    private function validate_header($header)
+    {
         $expected = ['email', 'name', 'skills', 'rate', 'currency', 'avg_rating', 'completed_projects', 'plan_code'];
-        
+
         if (count($header) < count($expected)) {
             return false;
         }
-        
+
         for ($i = 0; $i < min(3, count($expected)); $i++) {
             if (strtolower(trim($header[$i])) !== $expected[$i]) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
-    private function process_batch_transactionally($import_id, $batch_data, $current_count) {
+    private function process_batch_transactionally($import_id, $batch_data, $current_count)
+    {
         global $wpdb;
-        
+
         $wpdb->query('START TRANSACTION');
-        
+
         try {
             foreach ($batch_data as $row_data) {
                 if (!empty($row_data['email'])) {
                     $this->upsert_vendor($row_data);
                 }
             }
-            
+
             $wpdb->query('COMMIT');
             return true;
-            
+
         } catch (\Exception $e) {
             $wpdb->query('ROLLBACK');
             return new \WP_Error('batch_error', 'Failed to process batch: ' . $e->getMessage());
         }
     }
 
-    private function upsert_vendor($data) {
+    private function upsert_vendor($data)
+    {
         global $wpdb;
-        
+
         $vendors_table = $this->db_schema->get_table_name('vendors');
         $skills_table = $this->db_schema->get_table_name('skills');
         $vendor_skills_table = $this->db_schema->get_table_name('vendor_skills');
-        
+
         if (empty($data['email']) || empty($data['name'])) {
             return false;
         }
-        
+
         if (!is_email($data['email'])) {
             return false;
         }
@@ -198,7 +240,7 @@ class Importer {
             "SELECT id FROM $vendors_table WHERE email = %s",
             $data['email']
         ));
-        
+
         if ($vendor_id) {
             $wpdb->update(
                 $vendors_table,
@@ -232,18 +274,19 @@ class Importer {
             );
             $vendor_id = $wpdb->insert_id;
         }
-        
+
         if ($vendor_id && !empty($data['skills'])) {
             $wpdb->delete($vendor_skills_table, ['vendor_id' => $vendor_id]);
-            
+
             foreach ($data['skills'] as $skill_name) {
-                if (empty(trim($skill_name))) continue;
-                
+                if (empty(trim($skill_name)))
+                    continue;
+
                 $skill_id = $wpdb->get_var($wpdb->prepare(
                     "SELECT id FROM $skills_table WHERE normalized_name = %s",
                     $skill_name
                 ));
-                
+
                 if (!$skill_id) {
                     $wpdb->insert(
                         $skills_table,
@@ -255,7 +298,7 @@ class Importer {
                     );
                     $skill_id = $wpdb->insert_id;
                 }
-                
+
                 $wpdb->insert(
                     $vendor_skills_table,
                     [
@@ -266,16 +309,17 @@ class Importer {
                 );
             }
         }
-        
+
         return $vendor_id;
     }
 
-    private function create_import_record($filename, $file_hash, $total_rows) {
+    private function create_import_record($filename, $file_hash, $total_rows)
+    {
         global $wpdb;
         $imports_table = $this->db_schema->get_table_name('imports');
-        
+
         $unique_hash = $file_hash . '_' . time();
-        
+
         $result = $wpdb->insert($imports_table, [
             'filename' => sanitize_file_name($filename),
             'file_hash' => $unique_hash,
@@ -292,7 +336,8 @@ class Importer {
         return $wpdb->insert_id;
     }
 
-    private function parse_csv_row($row) {
+    private function parse_csv_row($row)
+    {
         if (empty($row) || count($row) < 8) {
             return null;
         }
@@ -323,122 +368,143 @@ class Importer {
         return $parsed;
     }
 
-    private function parse_float($value) {
+    private function parse_float($value)
+    {
         if (is_numeric($value)) {
             return floatval($value);
         }
-        
+
         $value = str_replace(',', '.', $value);
         $value = preg_replace('/[^0-9.]/', '', $value);
-        
+
         return floatval($value);
     }
 
-    private function normalize_skills($skills_string) {
+    private function normalize_skills($skills_string)
+    {
         if (empty($skills_string)) {
             return [];
         }
-        
+
         $skills = array_map('trim', explode(',', $skills_string));
         $normalized_skills = [];
-        
+
         foreach ($skills as $skill) {
             $normalized = strtolower(sanitize_text_field($skill));
             $normalized = preg_replace('/[^a-z0-9\s]/', '', $normalized);
             $normalized = ucwords(trim($normalized));
-            
+
             if (!empty($normalized)) {
                 $normalized_skills[] = $normalized;
             }
         }
-        
+
         return array_unique($normalized_skills);
     }
 
-    private function count_csv_rows($file_path) {
+    private function count_csv_rows($file_path)
+    {
         $handle = fopen($file_path, 'r');
-        if (!$handle) return 0;
+        if (!$handle)
+            return 0;
 
         $count = 0;
-        while (fgetcsv($handle) !== FALSE) $count++;
+        while (fgetcsv($handle) !== FALSE)
+            $count++;
         fclose($handle);
 
         return max(0, $count - 1);
     }
 
-    private function delete_import_record($import_id) {
+    private function delete_import_record($import_id)
+    {
         global $wpdb;
         $imports_table = $this->db_schema->get_table_name('imports');
         return $wpdb->delete($imports_table, ['id' => $import_id]);
     }
 
-    private function update_import_progress($import_id, $processed, $total_rows) {
+    private function update_import_progress($import_id, $processed, $total_rows)
+    {
         global $wpdb;
         $imports_table = $this->db_schema->get_table_name('imports');
-        
+
         $wpdb->update(
             $imports_table,
             ['processed_rows' => $processed, 'updated_at' => current_time('mysql')],
             ['id' => $import_id]
         );
-        
+
         wp_cache_delete($import_id, $imports_table);
     }
 
-    private function is_import_cancelled($import_id) {
+    private function is_import_cancelled($import_id)
+    {
         global $wpdb;
         $imports_table = $this->db_schema->get_table_name('imports');
         $status = $wpdb->get_var($wpdb->prepare("SELECT status FROM $imports_table WHERE id = %d", $import_id));
         return $status === 'cancelled';
     }
 
-    public function handle_cancel_import() {
+    public function handle_cancel_import()
+    {
         check_ajax_referer('cbvr_import_nonce', 'nonce');
-        if (!current_user_can('manage_options')) wp_send_json_error('Insufficient permissions');
+        if (!current_user_can('manage_options'))
+            wp_send_json_error('Insufficient permissions');
 
         $import_id = absint($_POST['import_id'] ?? 0);
-        if (!$import_id) wp_send_json_error('Invalid import ID');
+        if (!$import_id)
+            wp_send_json_error('Invalid import ID');
 
         $result = $this->cancel_import($import_id);
-        if (is_wp_error($result)) wp_send_json_error($result->get_error_message());
+        if (is_wp_error($result))
+            wp_send_json_error($result->get_error_message());
 
         wp_send_json_success('Import cancelled successfully');
     }
 
-    public function cancel_import($import_id) {
+    public function cancel_import($import_id)
+    {
         global $wpdb;
         $imports_table = $this->db_schema->get_table_name('imports');
-        
+
         $result = $wpdb->update(
             $imports_table,
             ['status' => 'cancelled', 'updated_at' => current_time('mysql')],
             ['id' => $import_id]
         );
 
-        if ($result === false) return new \WP_Error('db_error', 'Failed to cancel import');
+        if ($result === false)
+            return new \WP_Error('db_error', 'Failed to cancel import');
 
         $this->lock->release('csv_import');
         return true;
     }
 
-    private function cleanup_import($import_id, $file_path) {
+    private function cleanup_import($import_id, $file_path)
+    {
         $this->update_import_status($import_id, 'cancelled');
         $this->lock->release('csv_import');
         $this->cleanup_file($file_path);
+        $this->clear_search_cache();
     }
 
-    private function cleanup_file($file_path) {
-        if (file_exists($file_path)) @unlink($file_path);
+    private function cleanup_file($file_path)
+    {
+        if (file_exists($file_path))
+            @unlink($file_path);
     }
 
-    private function update_import_status($import_id, $status, $processed_rows = null, $error_message = null) {
+    private function update_import_status($import_id, $status, $processed_rows = null, $error_message = null)
+    {
         global $wpdb;
         $imports_table = $this->db_schema->get_table_name('imports');
-        
+
         $update_data = ['status' => $status, 'updated_at' => current_time('mysql')];
-        if ($processed_rows !== null) $update_data['processed_rows'] = $processed_rows;
-        if ($error_message !== null) $update_data['error_message'] = $error_message;
-        
+        if ($processed_rows !== null)
+            $update_data['processed_rows'] = $processed_rows;
+        if ($error_message !== null)
+            $update_data['error_message'] = $error_message;
+
         $wpdb->update($imports_table, $update_data, ['id' => $import_id]);
     }
 }
