@@ -1,4 +1,4 @@
-(function($) {
+(function ($) {
     'use strict';
 
     class CBVRAdmin {
@@ -6,7 +6,7 @@
             this.importInProgress = false;
             this.importCheckInterval = null;
             this.currentImportId = null;
-            
+
             this.init();
         }
 
@@ -17,21 +17,35 @@
         bindEvents() {
             // Import form submission
             $('#cbvr-import-form').on('submit', (e) => this.handleImportSubmit(e));
-            
+
             // Cancel import buttons
             $(document).on('click', '.cbvr-cancel-import, .cbvr-cancel-stuck-import', (e) => this.handleCancelImport(e));
             $('#cbvr-cancel-import').on('click', () => this.cancelCurrentImport());
-            
+
             // Clear locks button
             $('#cbvr-clear-locks').on('click', () => this.clearImportLocks());
-            
+
             // Reset form when file input changes
             $('#csv_file').on('change', () => this.resetImportProgress());
+
+            $('#cbvr-clear-cache').on('click', () => {
+                const $status = $('#cbvr-clear-cache-status');
+                $status.text('Clearing cache...');
+                $.post(cbvr_admin.ajax_url,
+                    { action: 'cbvr_clear_search_cache', nonce: cbvr_admin.nonce },
+                    function (response) {
+                        if (response.success) {
+                            $status.text('Cache cleared successfully!');
+                        } else {
+                            $status.text('Failed to clear cache.');
+                        }
+                    });
+            });
         }
 
         handleImportSubmit(e) {
             e.preventDefault();
-            
+
             if (this.importInProgress) {
                 alert(cbvr_admin.importing);
                 return;
@@ -65,24 +79,24 @@
                 dataType: 'json',
                 timeout: 300000 // 5 minutes timeout for large files
             })
-            .done((response) => {
-                if (response.success) {
-                    this.currentImportId = response.data.import_id;
-                    // Start checking progress immediately
-                    this.startProgressChecking();
-                } else {
-                    this.handleImportError(response.data);
+                .done((response) => {
+                    if (response.success) {
+                        this.currentImportId = response.data.import_id;
+                        // Start checking progress immediately
+                        this.startProgressChecking();
+                    } else {
+                        this.handleImportError(response.data);
+                        this.hideImportProgress();
+                    }
+                })
+                .fail((xhr, status, error) => {
+                    this.handleImportError('Network error: ' + error);
                     this.hideImportProgress();
-                }
-            })
-            .fail((xhr, status, error) => {
-                this.handleImportError('Network error: ' + error);
-                this.hideImportProgress();
-            })
-            .always(() => {
-                this.importInProgress = false;
-                this.updateImportButton(false);
-            });
+                })
+                .always(() => {
+                    this.importInProgress = false;
+                    this.updateImportButton(false);
+                });
         }
 
         startProgressChecking() {
@@ -109,41 +123,41 @@
                 dataType: 'json',
                 timeout: 10000
             })
-            .done((response) => {
-                if (response.success) {
-                    this.updateProgressDisplay(response.data);
-                    
-                    // Stop checking if import is complete
-                    if (response.data.status === 'completed' || 
-                        response.data.status === 'failed' || 
-                        response.data.status === 'cancelled') {
+                .done((response) => {
+                    if (response.success) {
+                        this.updateProgressDisplay(response.data);
+
+                        // Stop checking if import is complete
+                        if (response.data.status === 'completed' ||
+                            response.data.status === 'failed' ||
+                            response.data.status === 'cancelled') {
+                            this.stopProgressChecking();
+
+                            if (response.data.status === 'failed') {
+                                this.showImportError(response.data.error);
+                            }
+
+                            if (response.data.status === 'cancelled') {
+                                this.showImportMessage('Import cancelled');
+                            }
+
+                            // Hide cancel button for finished imports
+                            $('#cbvr-cancel-import').hide();
+
+                            // Reload page after 3 seconds to show final state
+                            setTimeout(() => {
+                                location.reload();
+                            }, 3000);
+                        }
+                    } else {
                         this.stopProgressChecking();
-                        
-                        if (response.data.status === 'failed') {
-                            this.showImportError(response.data.error);
-                        }
-                        
-                        if (response.data.status === 'cancelled') {
-                            this.showImportMessage('Import cancelled');
-                        }
-                        
-                        // Hide cancel button for finished imports
-                        $('#cbvr-cancel-import').hide();
-                        
-                        // Reload page after 3 seconds to show final state
-                        setTimeout(() => {
-                            location.reload();
-                        }, 3000);
+                        this.handleImportError(response.data);
                     }
-                } else {
-                    this.stopProgressChecking();
-                    this.handleImportError(response.data);
-                }
-            })
-            .fail(() => {
-                // Don't stop on network errors, just retry
-                console.log('Progress check failed, retrying...');
-            });
+                })
+                .fail(() => {
+                    // Don't stop on network errors, just retry
+                    console.log('Progress check failed, retrying...');
+                });
         }
 
         stopProgressChecking() {
@@ -155,16 +169,16 @@
 
         updateProgressDisplay(data) {
             const percentage = data.percentage || 0;
-            
+
             // Update progress bar smoothly
             $('.progress-fill').css('width', percentage + '%');
             $('.progress-text').text(percentage + '%');
-            
+
             // Update status text
             $('#import-status').text(this.getStatusText(data.status));
             $('#import-processed').text(data.processed);
             $('#import-total').text(data.total);
-            
+
             // Show/hide error
             if (data.error) {
                 $('#import-error-message').text(data.error);
@@ -172,7 +186,7 @@
             } else {
                 $('#import-error').hide();
             }
-            
+
             // Show/hide cancel button
             if (data.status === 'pending' || data.status === 'processing') {
                 $('#cbvr-cancel-import').show();
@@ -231,31 +245,31 @@
                 },
                 dataType: 'json'
             })
-            .done((response) => {
-                if (response.success) {
-                    alert('Import locks cleared successfully! The page will now reload.');
-                    location.reload();
-                } else {
-                    alert('Failed to clear import locks: ' + response.data);
-                }
-            })
-            .fail(() => {
-                alert('Network error while clearing import locks');
-            });
+                .done((response) => {
+                    if (response.success) {
+                        alert('Import locks cleared successfully! The page will now reload.');
+                        location.reload();
+                    } else {
+                        alert('Failed to clear import locks: ' + response.data);
+                    }
+                })
+                .fail(() => {
+                    alert('Network error while clearing import locks');
+                });
         }
 
         handleCancelImport(e) {
             e.preventDefault();
             const importId = $(e.target).data('import-id');
-            
+
             if (!importId) {
                 return;
             }
-            
+
             if (!confirm('Are you sure you want to cancel this import?')) {
                 return;
             }
-            
+
             this.cancelImport(importId, $(e.target));
         }
 
@@ -263,11 +277,11 @@
             if (!this.currentImportId) {
                 return;
             }
-            
+
             if (!confirm('Are you sure you want to cancel this import?')) {
                 return;
             }
-            
+
             this.cancelImport(this.currentImportId);
         }
 
@@ -282,35 +296,35 @@
                 },
                 dataType: 'json'
             })
-            .done((response) => {
-                if (response.success) {
-                    this.showImportMessage('Import cancelled successfully');
-                    
-                    if (button) {
-                        button.closest('tr').find('td:nth-child(2)').html('<span class="status-cancelled">Cancelled</span>');
-                        button.remove();
-                    }
-                    
-                    if (importId === this.currentImportId) {
-                        this.stopProgressChecking();
-                        $('#cbvr-cancel-import').hide();
-                        $('#import-status').text('Cancelled');
-                        
-                        // Reload page after 2 seconds
-                        setTimeout(() => {
+                .done((response) => {
+                    if (response.success) {
+                        this.showImportMessage('Import cancelled successfully');
+
+                        if (button) {
+                            button.closest('tr').find('td:nth-child(2)').html('<span class="status-cancelled">Cancelled</span>');
+                            button.remove();
+                        }
+
+                        if (importId === this.currentImportId) {
+                            this.stopProgressChecking();
+                            $('#cbvr-cancel-import').hide();
+                            $('#import-status').text('Cancelled');
+
+                            // Reload page after 2 seconds
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                        } else {
+                            // Reload page to refresh the list
                             location.reload();
-                        }, 1000);
+                        }
                     } else {
-                        // Reload page to refresh the list
-                        location.reload();
+                        alert('Failed to cancel import: ' + response.data);
                     }
-                } else {
-                    alert('Failed to cancel import: ' + response.data);
-                }
-            })
-            .fail(() => {
-                alert('Network error while cancelling import');
-            });
+                })
+                .fail(() => {
+                    alert('Network error while cancelling import');
+                });
         }
 
         handleImportError(error) {
