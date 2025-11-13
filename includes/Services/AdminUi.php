@@ -16,6 +16,7 @@ class AdminUi
         add_action('wp_ajax_cbvr_cancel_import', [$this, 'handle_cancel_import']);
         add_action('wp_ajax_cbvr_clear_import_lock', [$this, 'handle_clear_import_lock']);
         add_action('wp_ajax_cbvr_force_process', [$this, 'handle_force_process']);
+        add_action('wp_ajax_cbvr_clear_search_cache', [$this, 'handle_clear_search_cache']);
     }
 
     public function add_admin_menu()
@@ -23,12 +24,29 @@ class AdminUi
         add_menu_page(
             __('Vendor Registry Import', 'cb-vendor-registry'),
             __('Vendor Registry', 'cb-vendor-registry'),
-            'manage_options',                
-            'cb-vendor-registry-import',       
-            [$this, 'render_import_page'],      
-            'dashicons-database-import',        
-            70                          
+            'manage_options',
+            'cb-vendor-registry-import',
+            [$this, 'render_import_page'],
+            'dashicons-database-import',
+            70
         );
+    }
+
+    public function handle_clear_search_cache()
+    {
+        check_ajax_referer('cbvr_import_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Insufficient permissions');
+        }
+
+        $importer = new Importer();
+        $result = $importer->clear_search_cache();
+
+        wp_send_json_success([
+            'message' => 'Search cache cleared successfully',
+            'cleared_items' => $result
+        ]);
     }
 
 
